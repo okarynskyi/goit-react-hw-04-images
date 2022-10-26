@@ -1,4 +1,4 @@
-import { Component } from "react";
+import { useState, useEffect } from "react";
 import { Loader } from "./Loader/Loader";
 import { fetchImages } from 'API';
 import { ImageGallery } from './ImageGallery/ImageGallery';
@@ -7,68 +7,59 @@ import { Searchbar } from "./Searchbar/Searchbar";
 import { Modal } from "./Modal/Modal";
 import css from './App.module.css';
 
-export class App extends Component {
-    state = {
-        items: [],
-        loading: false,
-        error: null,
-        page: 1,
-        request: '',
-        modalOpen: false,
-        largeImageURL: '',
-    }
+export const App = () => {
+    const [items, setItems] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [page, setPage] = useState(1);
+    const [request, setRequest] = useState('');
+    const [modalOpen, setModalOpen] = useState(false);
+    const [largeImageURL, setLargeImageURL] = useState('');
 
-    componentDidUpdate(_, prevState) {
-        const { page, request } = this.state;
-        if (prevState.page !== page || prevState.request !== request) {
-            this.setState({ loading: true });
-            fetchImages(request, page)
+    useEffect(() => {
+        if (request === '') {
+            return;
+        }
+        setLoading(true);
+        fetchImages(request, page)
             .then(data =>
-                this.setState(({items}) => {
-                    return {
-                        items: [...items, ...data.hits]
-                    }
-                }))
+                setItems(prev => [...prev, ...data.hits]))
             .catch(error => {
-                this.setState({ error })
+                setError(error)
             })
-            .finally(() => this.setState({ loading: false }))
-        }
-    }
+            .finally(() => setLoading(false))
+    }, [request, page]);
 
-    loadMore = () => {
-        this.setState(({ page }) => {
-            return { page: page + 1 }
-        })
+    const loadMore = () => {
+        setPage(prev => prev + 1)
     };
     
-    handleFormSubmit = request => {
-        if (this.state.request !== request) {
-            this.setState({ request, page: 1, items: [] });
+    const handleFormSubmit = req => {
+        if (request !== req) {
+            setRequest(req);
+            setPage(1);
+            setItems([]);
         }
     };
 
-    modalOpen = () => this.setState({ modalOpen: true });
-    modalClose = () => this.setState({ modalOpen: false });
+    const modalIsOpen = () => setModalOpen(true);
+    const modalIsClose = () => setModalOpen(false);
 
-    goLargeImg = img => {
-        this.setState({ largeImageURL: img });
-        this.modalOpen();
+    const goLargeImg = img => {
+        setLargeImageURL(img);
+        modalIsOpen();
     };
+
+    const isItems = Boolean(items.length);
     
-    render() {
-        const { items, loading, error, modalOpen, largeImageURL } = this.state;
-        const isItems = Boolean(items.length);
-        const { loadMore, handleFormSubmit, modalClose } = this;
-        return (
-            <div className={css.App}>
-                <Searchbar onSubmit={handleFormSubmit} />
-                {loading && <Loader />}
-                {error && <p>Restart page or modify the request</p>}
-                {isItems && <ImageGallery items={items} goLargeImg={this.goLargeImg} />}
-                {isItems && <Button onClick={loadMore} />}
-                {modalOpen && <Modal largeImageURL={largeImageURL} modalClose={modalClose} />}
-            </div>
-      )
-  }
+    return (
+        <div className={css.App}>
+            <Searchbar onSubmit={handleFormSubmit} />
+            {loading && <Loader />}
+            {error && <p>Restart page or modify the request</p>}
+            {isItems && <ImageGallery items={items} goLargeImg={goLargeImg} />}
+            {isItems && <Button onClick={loadMore} />}
+            {modalOpen && <Modal largeImageURL={largeImageURL} modalClose={modalIsClose} />}
+        </div>
+    )
 }
